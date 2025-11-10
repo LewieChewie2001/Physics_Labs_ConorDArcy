@@ -122,6 +122,25 @@ bool CircleCircleOverlap(FizziksCircle* circleA, FizziksCircle* circleB)
 		return false; 
 }
 
+bool CircleCircleCollisionResponse(FizziksCircle* circleA, FizziksCircle* circleB)
+{
+	Vector2 displacementFromAToB = circleB->position - circleA->position;
+	float distance = Vector2Length(displacementFromAToB);//Use pythagorean theorem to get magnitude of displacement vector between circles to get a distance
+	float sumOfRadii = circleA->radius + circleB->radius;
+	float overlap = sumOfRadii - distance;
+	Vector2 normal = displacementFromAToB / distance;
+	Vector2 mtv = normal * overlap; // minimum translation vector (to have object no longer overlapping) 
+
+	if (overlap > 0)
+	{
+		circleA->position -= mtv * 0.5f;
+		circleB->position += mtv * 0.5f;
+		return true;
+	}
+	else
+		return false;
+}
+
 
 bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace)
 {
@@ -136,6 +155,41 @@ bool CircleHalfspaceOverlap(FizziksCircle* circle, FizziksHalfspace* halfspace)
 	Vector2 midpoint = circle->position - vectorProjection * 0.5f;
 	DrawText(TextFormat("D: %6.0f", dot), midpoint.x, midpoint.y, 30, GRAY);
 
+
+	if (dot < circle->radius)
+	{
+		return true;
+	}
+	else
+		return false;
+}
+
+
+bool CircleHalfspaceCollisionResponse(FizziksCircle* circle, FizziksHalfspace* halfspace)
+{
+
+	Vector2 displacementToCircle = circle->position - halfspace->position;
+	float dot = Vector2DotProduct(displacementToCircle, halfspace->getNormal());
+	Vector2 vectorProjection = halfspace->getNormal() * dot;
+
+
+	DrawLineEx(circle->position, circle->position - vectorProjection, 1, GRAY);
+
+	Vector2 midpoint = circle->position - vectorProjection * 0.5f;
+	DrawText(TextFormat("D: %6.0f", dot), midpoint.x, midpoint.y, 30, GRAY);
+
+	float overlap = circle->radius - dot;
+
+	if (overlap > 0)
+	{
+		Vector2 mtv = halfspace->getNormal() * overlap;
+		circle->position += mtv;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 
 	if (dot < circle->radius)
 	{
@@ -211,16 +265,16 @@ public:
 		
 				if(shapeOfA == CIRCLE && shapeOfB == CIRCLE)
 				{
-					didOverLap = CircleCircleOverlap((FizziksCircle*)objektPointerA, (FizziksCircle*)objektPointerB);
+					didOverLap = CircleCircleCollisionResponse((FizziksCircle*)objektPointerA, (FizziksCircle*)objektPointerB);
 
 				}
 				else if (shapeOfA == CIRCLE && shapeOfB == HALF_SPACE)
 				{
-					didOverLap = CircleHalfspaceOverlap((FizziksCircle*)objektPointerA, (FizziksHalfspace*)objektPointerB);
+					didOverLap = CircleHalfspaceCollisionResponse((FizziksCircle*)objektPointerA, (FizziksHalfspace*)objektPointerB);
 				}
 				else if (shapeOfA == HALF_SPACE && shapeOfB == CIRCLE)
 				{
-					didOverLap = CircleHalfspaceOverlap((FizziksCircle*)objektPointerB, (FizziksHalfspace*)objektPointerA);
+					didOverLap = CircleHalfspaceCollisionResponse((FizziksCircle*)objektPointerB, (FizziksHalfspace*)objektPointerA);
 				}
 
 				if (didOverLap)
@@ -239,6 +293,7 @@ float angle = 0;
 
 FizziksWorld world;
 FizziksHalfspace halfspace;
+FizziksHalfspace halfspace2;
 
 
 //Remove objects offscreen
@@ -348,8 +403,14 @@ int main()
 	InitWindow(InitialWidth, InitialHeight, "GAME2005 Joss Moo-Young 123456789");
 	SetTargetFPS(TARGET_FPS);
 	halfspace.isStatic = true;
-	halfspace.position = { 500, 700 };
+	halfspace.position = { 300, 900 };
+	halfspace2.setRotationDegrees(15);
 	world.add(&halfspace);
+
+	halfspace2.isStatic = true;
+	halfspace2.position = { 900, 900 };
+	halfspace2.setRotationDegrees(-15);
+	world.add(&halfspace2);
 
 	while (!WindowShouldClose()) // Loops TARGET_FPS times per second
 	{
